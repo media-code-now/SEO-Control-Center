@@ -42,7 +42,7 @@ export function WorkspaceItemForm({ workspace }: WorkspaceItemFormProps) {
     startTransition(async () => {
       const result = await updateWorkspaceAction(values);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to update workspace");
+        setServerError("error" in result ? result.error : "Unable to update workspace");
         return;
       }
     });
@@ -53,7 +53,7 @@ export function WorkspaceItemForm({ workspace }: WorkspaceItemFormProps) {
     startTransition(async () => {
       const result = await deleteWorkspaceAction(workspace.id);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to delete workspace");
+        setServerError("error" in result ? result.error : "Unable to delete workspace");
       }
     });
   };

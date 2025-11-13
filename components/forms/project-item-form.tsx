@@ -42,7 +42,7 @@ export function ProjectItemForm({ project }: ProjectItemFormProps) {
     startTransition(async () => {
       const result = await updateProjectAction(values);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to update project");
+        setServerError("error" in result ? result.error : "Unable to update project");
       }
     });
   });
@@ -52,7 +52,7 @@ export function ProjectItemForm({ project }: ProjectItemFormProps) {
     startTransition(async () => {
       const result = await deleteProjectAction(project.id);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to delete project");
+        setServerError("error" in result ? result.error : "Unable to delete project");
       }
     });
   };

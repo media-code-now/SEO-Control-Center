@@ -26,7 +26,7 @@ export function WorkspaceForm() {
     startTransition(async () => {
       const result = await createWorkspaceAction(values);
       if (!result?.success) {
-        setServerError(result?.error ?? "Something went wrong");
+        setServerError("error" in result ? result.error : "Something went wrong");
         return;
       }
       form.reset();
