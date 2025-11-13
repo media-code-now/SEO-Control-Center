@@ -92,7 +92,7 @@ export async function getTopPageOpportunities(projectId: string, days = 28) {
     select: { id: true, url: true, title: true },
   });
 
-  const pageUrlMap = new Map<string, { id: string; url: string; title: string }>();
+  const pageUrlMap = new Map<string, { id: string; url: string; title: string | null }>();
   pages.forEach((page) => {
     const normalized = normalizeUrl(page.url);
     if (normalized) {
