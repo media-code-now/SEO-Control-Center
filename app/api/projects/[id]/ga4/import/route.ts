@@ -41,7 +41,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       workspaceId: project.workspaceId,
       userId: session.user.id,
       actorEmail: session.user.email ?? undefined,
-      context: { rows: imported?.rows ?? 0 },
+      context: { rows: imported },
     });
     return NextResponse.json({ imported });
   } catch (error) {
