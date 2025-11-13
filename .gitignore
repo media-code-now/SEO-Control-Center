@@ -11,3 +11,6 @@ dist
 coverage
 .DS_Store
 playwright/.auth
+
+# Local Netlify folder
+.netlify
