@@ -47,7 +47,7 @@ export function AuditDialog({ projectId, suggestedTypes = [] }: AuditDialogProps
     startTransition(async () => {
       const result = await createAuditAction(values);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to log audit.");
+        setServerError("error" in result ? String(result.error) : "Unable to log audit.");
         return;
       }
       form.reset({

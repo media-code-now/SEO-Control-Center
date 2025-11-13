@@ -44,7 +44,7 @@ export function CalendarForm({ projectId, briefs }: CalendarFormProps) {
         briefId: values.briefId || undefined,
       });
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to schedule content.");
+        setServerError("error" in result ? String(result.error) : "Unable to schedule content.");
         return;
       }
       form.reset({

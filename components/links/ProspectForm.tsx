@@ -39,7 +39,7 @@ export function ProspectForm({ projectId, templates }: { projectId: string; temp
         templateId: values.templateId || undefined,
       });
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to save prospect");
+        setServerError("error" in result ? String(result.error) : "Unable to save prospect");
         return;
       }
       form.reset({

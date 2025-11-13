@@ -317,7 +317,7 @@ function TaskDialog({
       }
 
       if (!actionResult?.success) {
-        setServerError(actionResult?.error ?? "Unable to save task");
+        setServerError("error" in actionResult ? String(actionResult.error) : "Unable to save task");
         return;
       }
       onSuccess?.();

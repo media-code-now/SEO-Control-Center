@@ -256,7 +256,7 @@ function PageDialog({
         ? await updatePageAction({ id: page.id, ...values })
         : await createPageAction(values);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to save page");
+        setServerError("error" in result ? String(result.error) : "Unable to save page");
         return;
       }
       onSuccess?.();

@@ -35,7 +35,7 @@ export function TemplateManager({ projectId, templates }: { projectId: string; t
     startTransition(async () => {
       const result = await createEmailTemplateAction(values);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to save template.");
+        setServerError("error" in result ? String(result.error) : "Unable to save template.");
         return;
       }
       form.reset({
