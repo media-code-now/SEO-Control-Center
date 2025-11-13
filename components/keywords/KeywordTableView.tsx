@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   flexRender,
@@ -270,7 +270,7 @@ function KeywordDialog({
         ? await updateKeywordAction({ id: keyword.id, ...values })
         : await createKeywordAction(values);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to save keyword");
+        setServerError("error" in result ? String(result.error) : "Unable to save keyword");
         return;
       }
       onSuccess?.();
@@ -392,7 +392,7 @@ function MappingDialog({
     startTransition(async () => {
       const result = await upsertKeywordMappingAction(values);
       if (!result?.success) {
-        setServerError(result?.error ?? "Unable to map page");
+        setServerError("error" in result ? String(result.error) : "Unable to map page");
         return;
       }
       onSuccess?.();
