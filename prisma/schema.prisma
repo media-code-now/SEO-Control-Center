@@ -1,0 +1,570 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  EDITOR
+  ANALYST
+  GUEST
+}
+
+enum ProjectStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum IntegrationType {
+  SEARCH_CONSOLE
+  GA4
+  AHREFS
+  OTHER
+}
+
+enum IntegrationStatus {
+  PENDING
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+enum KeywordPageRole {
+  PRIMARY
+  SECONDARY
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  REVIEW
+  BLOCKED
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AuditStatus {
+  QUEUED
+  RUNNING
+  PASSED
+  FAILED
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ALERT
+}
+
+model User {
+  id            String             @id @default(cuid())
+  name          String?
+  email         String?            @unique
+  emailVerified DateTime?
+  image         String?
+  accounts        Account[]
+  sessions        Session[]
+  workspaces      Workspace[]        @relation("WorkspaceOwner")
+  memberships     WorkspaceMember[]
+  invitedMembers  WorkspaceMember[]  @relation("WorkspaceInviter")
+  keywords        Keyword[]
+  tasks           Task[]             @relation("TaskAssignee")
+  createdTasks    Task[]             @relation("TaskCreator")
+  notifications   Notification[]
+  auditLogs      AuditLog[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([createdAt])
+}
+
+model Workspace {
+  id          String             @id @default(cuid())
+  name        String
+  slug        String             @unique
+  plan        String             @default("free")
+  ownerId     String
+  owner       User               @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     WorkspaceMember[]
+  projects    Project[]
+  notifications Notification[]
+  auditLogs   AuditLog[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([ownerId])
+  @@index([createdAt])
+}
+
+model WorkspaceMember {
+  id          String         @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole  @default(GUEST)
+  invitedById String?
+  invitedBy   User?          @relation("WorkspaceInviter", fields: [invitedById], references: [id])
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId, role])
+  @@index([userId])
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  name         String
+  domain       String
+  targetMarket String?
+  gscSiteUrl   String?       @map("gsc_site_url")
+  ga4PropertyId String?      @map("ga4_property_id")
+  status       ProjectStatus @default(ACTIVE)
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  integrations Integration[]
+  keywords    Keyword[]
+  pages       Page[]
+  tasks       Task[]
+  audits      Audit[]
+  gscQueries  GscQuery[]
+  ga4Pages    Ga4Page[]
+  backlinks   Backlink[]
+  contents    PageContent[]
+  techSnapshots TechSnapshot[]
+  contentBriefs ContentBrief[]
+  contentCalendar ContentCalendarItem[]
+  prospects    Prospect[]
+  emailTemplates EmailTemplate[]
+  auditLogs   AuditLog[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([workspaceId, domain])
+  @@index([workspaceId, status])
+  @@index([createdAt])
+}
+
+model Integration {
+  id          String            @id @default(cuid())
+  projectId   String
+  type        IntegrationType
+  status      IntegrationStatus @default(PENDING)
+  externalId  String?
+  settings    Json?
+  connectedAt DateTime?
+  siteUrl     String?
+  propertyId  String?
+  accessToken String?
+  refreshToken String?
+  accessTokenExpires DateTime?
+  oauthState  String?
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([projectId, type])
+  @@index([oauthState])
+  @@index([projectId, status])
+}
+
+model Keyword {
+  id             String             @id @default(cuid())
+  projectId      String
+  userId         String?
+  phrase         String
+  intent         String?
+  cluster        String?
+  secondaryTerms String[]           @default([])
+  searchVolume   Int                @default(0)
+  difficulty     Int                @default(0)
+  targetPageId   String?
+  targetPage     Page?              @relation("KeywordTargetPage", fields: [targetPageId], references: [id])
+  mappings       KeywordPageMap[]
+  serpPositions  SerpPosition[]
+  snapshots      KeywordSnapshot[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  project        Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner          User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, phrase])
+  @@index([projectId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model KeywordSnapshot {
+  id         String   @id @default(cuid())
+  keywordId  String
+  position   Int
+  traffic    Int
+  recordedAt DateTime @default(now())
+  keyword    Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@index([keywordId, recordedAt])
+}
+
+model Page {
+  id            String       @id @default(cuid())
+  projectId     String
+  url           String
+  title         String?
+  pageType      String        @default("landing")
+  status        String        @default("published")
+  owner         String?
+  lastCrawl     DateTime?
+  keywords      Keyword[]    @relation("KeywordTargetPage")
+  mappings      KeywordPageMap[]
+  serpPositions SerpPosition[]
+  ga4Metrics    Ga4Page[]
+  content       PageContent?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, url])
+  @@index([projectId])
+}
+
+model PageContent {
+  id          String   @id @default(cuid())
+  projectId   String
+  pageId      String   @unique
+  contentHtml String?  @db.Text
+  contentText String   @default("") @db.Text
+  wordCount   Int      @default(0)
+  extractedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, updatedAt])
+}
+
+model KeywordPageMap {
+  id        String   @id @default(cuid())
+  keywordId String
+  pageId    String
+  source    String?  // e.g. "manual", "auto"
+  status    String   @default("active")
+  role      KeywordPageRole @default(PRIMARY)
+  createdAt DateTime @default(now())
+  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([keywordId, pageId])
+  @@index([pageId])
+}
+
+enum TaskType {
+  ONPAGE
+  CONTENT
+  TECH
+  LINK
+  LOCAL
+}
+
+enum ContentStatus {
+  IDEATION
+  BRIEFING
+  DRAFTING
+  EDITING
+  APPROVED
+  PUBLISHED
+}
+
+enum ProspectStage {
+  PROSPECT
+  PITCHED
+  WON
+  LOST
+}
+
+enum TechSnapshotType {
+  CWV
+  INDEXATION
+  STATUS
+}
+
+model TechSnapshot {
+  id         String           @id @default(cuid())
+  projectId  String
+  type       TechSnapshotType
+  metrics    Json
+  notes      String?
+  capturedAt DateTime         @default(now())
+  project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type, capturedAt])
+  @@index([projectId, capturedAt])
+}
+
+model Task {
+  id           String       @id @default(cuid())
+  projectId    String
+  title        String
+  description  String?
+  status       TaskStatus   @default(OPEN)
+  priority     TaskPriority @default(MEDIUM)
+  dueDate      DateTime?
+  assignedToId String?
+  createdById  String?
+  type         TaskType     @default(CONTENT)
+  contentBriefId String?
+  scoreCurrent  Float       @default(0)
+  scorePotential Float      @default(0)
+  order        Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee     User?        @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  creator      User?        @relation("TaskCreator", fields: [createdById], references: [id])
+  contentBrief ContentBrief? @relation(fields: [contentBriefId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, status])
+  @@index([assignedToId])
+  @@index([dueDate])
+  @@index([projectId, order])
+}
+
+model ContentBrief {
+  id                 String                @id @default(cuid())
+  projectId          String
+  keyword            String
+  title              String
+  outline            Json
+  questions          String[]
+  entities           String[]
+  internalLinks      Json?
+  competitorOutlines Json?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks              Task[]
+  calendarItems      ContentCalendarItem[]
+
+  @@index([projectId, keyword])
+  @@index([projectId, createdAt])
+}
+
+model ContentCalendarItem {
+  id          String         @id @default(cuid())
+  projectId   String
+  briefId     String?
+  title       String
+  status      ContentStatus  @default(IDEATION)
+  owner       String?
+  publishDate DateTime
+  draftLink   String?
+  notes       String?
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  brief       ContentBrief?  @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([projectId, publishDate])
+  @@index([projectId, status])
+}
+
+model Prospect {
+  id         String        @id @default(cuid())
+  projectId  String
+  domain     String
+  contact    String?
+  email      String?
+  stage      ProspectStage @default(PROSPECT)
+  authority  Int           @default(0)
+  notes      String?
+  templateId String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  template   EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, stage])
+  @@index([projectId, domain])
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  subject   String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  prospects Prospect[]
+
+  @@index([projectId, name])
+}
+
+model AuditLog {
+  id          String     @id @default(cuid())
+  workspaceId String?
+  projectId   String?
+  userId      String?
+  actorEmail  String?
+  action      String
+  context     Json?
+  createdAt   DateTime   @default(now())
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Audit {
+  id        String     @id @default(cuid())
+  projectId String
+  title     String     @default("Tech audit")
+  type      String
+  status    AuditStatus @default(QUEUED)
+  score     Int?
+  metadata  Json?
+  summary   Json?
+  startedAt DateTime?
+  finishedAt DateTime?
+  findings  Json?
+  createdAt DateTime   @default(now())
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type])
+  @@index([createdAt])
+}
+
+model SerpPosition {
+  id         String   @id @default(cuid())
+  keywordId  String
+  pageId     String?
+  position   Int
+  traffic    Int      @default(0)
+  capturedAt DateTime @default(now())
+  keyword    Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  page       Page?    @relation(fields: [pageId], references: [id])
+
+  @@index([keywordId, capturedAt])
+  @@index([capturedAt])
+  @@unique([keywordId, capturedAt])
+  @@index([pageId])
+}
+
+model GscQuery {
+  id         String   @id @default(cuid())
+  projectId  String
+  query      String
+  pageUrl    String?
+  clicks     Int      @default(0)
+  impressions Int     @default(0)
+  ctr        Float    @default(0)
+  position   Float    @default(0)
+  date       DateTime
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, query, pageUrl, date])
+  @@index([projectId, date])
+}
+
+model Ga4Page {
+  id        String   @id @default(cuid())
+  projectId String
+  pageId    String?
+  url       String
+  views     Int      @default(0)
+  sessions  Int      @default(0)
+  conversions Int    @default(0)
+  date      DateTime
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  page      Page?    @relation(fields: [pageId], references: [id])
+
+  @@index([projectId, date])
+  @@index([url])
+  @@index([pageId])
+  @@unique([projectId, url, date])
+}
+
+model Backlink {
+  id           String   @id @default(cuid())
+  projectId    String
+  sourceUrl    String
+  targetUrl    String
+  anchorText   String?
+  status       String   @default("active")
+  discoveredAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([discoveredAt])
+}
+
+model Notification {
+  id           String           @id @default(cuid())
+  userId       String
+  workspaceId  String?
+  type         NotificationType @default(INFO)
+  message      String
+  readAt       DateTime?
+  metadata     Json?
+  createdAt    DateTime         @default(now())
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace    Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([workspaceId])
+  @@index([createdAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

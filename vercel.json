@@ -1,0 +1,18 @@
+{
+  "cron": {
+    "jobs": [
+      {
+        "path": "/api/cron/sync",
+        "schedule": "0 * * * *"
+      },
+      {
+        "path": "/api/cron/gsc-nightly",
+        "schedule": "0 2 * * *"
+      },
+      {
+        "path": "/api/cron/link-scout",
+        "schedule": "0 3 */2 * *"
+      }
+    ]
+  }
+}

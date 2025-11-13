@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 224 45% 6%;
+    --foreground: 210 40% 98%;
+    --card: 225 60% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 60% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 198 92% 62%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 266 79% 64%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 29% 16%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 210 40% 20%;
+    --accent-foreground: 210 40% 98%;
+    --border: 220 28% 25%;
+    --input: 220 28% 25%;
+    --ring: 198 92% 62%;
+    --radius: 1rem;
+  }
+
+  body {
+    background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.35), transparent 55%),
+      radial-gradient(circle at 80% 0%, rgba(244, 63, 94, 0.25), transparent 45%),
+      radial-gradient(circle at 50% 80%, rgba(99, 102, 241, 0.35), transparent 55%),
+      hsl(var(--background));
+    color: hsl(var(--foreground));
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+    pointer-events: none;
+    backdrop-filter: blur(40px);
+    z-index: -1;
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto w-full max-w-6xl space-y-6 py-6;
+  }
+}
